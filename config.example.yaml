@@ -1,0 +1,48 @@
+# Real providers. API keys are read from the environment variables named here.
+providers:
+  anthropic:
+    type: anthropic
+    api_key_env: ANTHROPIC_API_KEY
+  openai:
+    type: openai
+    api_key_env: OPENAI_API_KEY
+  local:                      # any OpenAI-compatible server (vLLM, Ollama, LM Studio)
+    type: openai
+    base_url: http://localhost:11434/v1
+
+# Aliases clients ask for. Primary targets are load-balanced by weight;
+# fallbacks are tried in order when every primary target has failed.
+routes:
+  smart:
+    primary:
+      - {provider: anthropic, model: claude-opus-5-5}
+    fallbacks:
+      - {provider: anthropic, model: claude-sonnet-5-5}
+      - {provider: openai, model: gpt-5.4}
+  fast:
+    primary:
+      - {provider: anthropic, model: claude-haiku-5-5, weight: 3}
+      - {provider: local, model: llama3.1:8b, weight: 1}
+    fallbacks:
+      - {provider: anthropic, model: claude-sonnet-5-5}
+
+# USD per million tokens. Claude prices are first-party API list prices as of
+# October 2026; add entries for other models you route to.
+pricing:
+  claude-opus-5-5:   {input_per_mtok: 4.00, output_per_mtok: 20.00}
+  claude-sonnet-5-5: {input_per_mtok: 2.00, output_per_mtok: 10.00}
+  claude-haiku-5-5:  {input_per_mtok: 0.10, output_per_mtok: 0.50}
+
+# Gateway API keys. Prefer keys_env in production so secrets stay out of the file:
+#   GATEWAY_KEYS="sk-gw-abc:alice,sk-gw-def:batch-jobs"
+keys_env: GATEWAY_KEYS
+keys:
+  sk-gw-dev-local:
+    name: dev
+    requests_per_minute: 60
+    tokens_per_minute: 200000
+    budget_usd: 5.00
+
+retry: {attempts: 2, base_delay_s: 0.25, max_delay_s: 4}
+breaker: {failure_threshold: 5, cooldown_s: 30}
+cache: {enabled: true, ttl_s: 300, max_entries: 10000}

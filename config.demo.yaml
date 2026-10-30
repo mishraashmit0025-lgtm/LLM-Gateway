@@ -1,0 +1,16 @@
+# Runs with no API keys: two fake providers, one of which fails 30% of the time.
+providers:
+  flaky: {type: mock, latency_ms: 40, failure_rate: 0.3}
+  steady: {type: mock, latency_ms: 80}
+routes:
+  demo:
+    primary:
+      - {provider: flaky, model: mock-large}
+    fallbacks:
+      - {provider: steady, model: mock-small}
+pricing:
+  mock-large: {input_per_mtok: 4.0, output_per_mtok: 20.0}
+  mock-small: {input_per_mtok: 0.1, output_per_mtok: 0.5}
+keys:
+  sk-demo: {name: demo, requests_per_minute: 600, tokens_per_minute: 1000000, budget_usd: 1.0}
+breaker: {failure_threshold: 3, cooldown_s: 5}
